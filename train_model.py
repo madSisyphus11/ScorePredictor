@@ -8,6 +8,10 @@ import os
 matches = pd.read_csv('matches.csv', parse_dates=['date'])
 deliveries = pd.read_csv('deliveries.csv')
 
+# --- add these two lines ---
+matches.columns   = matches.columns.str.lower()
+deliveries.columns = deliveries.columns.str.lower()
+
 # Batting stats
 bat = deliveries.groupby(['match_id','batsman']).agg(
     runs=('batsman_runs','sum'),
