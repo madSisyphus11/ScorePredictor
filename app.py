@@ -101,15 +101,27 @@ def select_best_team(preds_df, budget=100, max_from_team=7, max_foreign=4):
     best = preds_df[preds_df.player.isin(sel)]
     backups = preds_df[~preds_df.player.isin(sel)].nlargest(5, "pred")
     return best.to_dict("records"), backups.to_dict("records")
+    
+import os
 
 @app.route("/", methods=["GET","POST"])
 def index():
-    logging.info("INDEX ROUTE HIT")
+    logging.info("INDEX ROUTE HIT (debug version)")
+    # Show what templates folder contains
+    tpl_dir = os.path.join(os.getcwd(), "templates")
     try:
-        return render_template("index.html")
+        files = os.listdir(tpl_dir)
     except Exception as e:
-        logging.error("Index render failed: %s", e)
-        return "<h1>Index error: see logs</h1><pre>" + str(e) + "</pre>", 500
+        files = f"Error listing {tpl_dir}: {e}"
+    # Show current working directory too
+    cwd = os.getcwd()
+    # Return a simple HTML page with that info
+    return f"""
+      <h1>Debug: Index Route</h1>
+      <p><strong>CWD:</strong> {cwd}</p>
+      <p><strong>Templates dir:</strong> {tpl_dir}</p>
+      <p><strong>Files in templates/:</strong> {files}</p>
+    """, 200
 
 @app.route("/predict")
 def predict():
