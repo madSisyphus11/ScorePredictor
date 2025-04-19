@@ -37,11 +37,16 @@ SQUADS = {
 }
 
 # ——— Load the trained model ———
+# ——— Load the trained model ———
 MODEL_PATH = os.path.join("model", "xgb_model.pkl")
 model = joblib.load(MODEL_PATH)
-# Monkey‑patch missing gpu_id
+
+# Monkey‑patch missing attributes so sklearn wrapper won’t error
 if not hasattr(model, "gpu_id"):
     model.gpu_id = None
+if not hasattr(model, "predictor"):
+    # 'auto' will let XGBoost pick the best CPU predictor
+    model.predictor = "auto"
 
 # ——— Feature extraction stub ———
 def extract_features(players, match_context):
