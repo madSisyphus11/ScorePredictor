@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 # Load squads from Excel
 IPL_XLSX = os.path.join("data", "IPL_Data.xlsx")
-squads_df = pd.read_excel(IPL_XLSX, sheet_name="Squads")
+squads_df = pd.read_excel(IPL_XLSX, sheet_name="Team Sheets")
 SQUADS = {
     team: squads_df.at[0, team].split("\n")
     for team in squads_df.columns
