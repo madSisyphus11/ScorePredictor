@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 import joblib
 from flask import Flask, render_template, request, redirect, url_for
-from pulp import LpProblem, LpVariable, lpSum, LpMaximize
+from pulp import LpProblem, LpVariable, lpSum, LpMaximize, PULP_CBC_CMD
 
 logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
@@ -93,16 +93,22 @@ def select_best_team(preds_df, budget=100, max_from_team=7, max_foreign=4):
     prob = LpProblem("Dream11", LpMaximize)
     x = {p: LpVariable(f"x_{i}", cat="Binary") for i,p in enumerate(preds_df.player)}
 
+    # Objective & constraints as before
     prob += lpSum(preds_df.loc[preds_df.player==p,"pred"].iloc[0] * x[p] for p in x)
     prob += lpSum(x.values()) == 11
     prob += lpSum(costs[p] * x[p] for p in x) <= budget
     for team in preds_df.team.unique():
-        prob += lpSum(x[p] for p in x if preds_df.loc[preds_df.player==p,"team"].iloc[0]==team) <= max_from_team
+        prob += lpSum(x[p] for p in x 
+                      if preds_df.loc[preds_df.player==p,"team"].iloc[0]==team) \
+                <= max_from_team
     prob += lpSum(x[p] for p in x if foreign[p]) <= max_foreign
     for must in ["WK-BAT","Batter","Allrounder","Bowler"]:
         prob += lpSum(x[p] for p in x if roles[p]==must) >= 1
 
-    prob.solve()
+    # --- Use CBC solver with a small time limit to avoid hanging ---
+    solver = PULP_CBC_CMD(msg=False, timeLimit=5)
+    prob.solve(solver)
+
     sel = [p for p in x if x[p].value()==1]
     best = preds_df[preds_df.player.isin(sel)]
     backups = preds_df[~preds_df.player.isin(sel)].nlargest(5, "pred")
