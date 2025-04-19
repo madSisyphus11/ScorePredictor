@@ -7,6 +7,8 @@ import pandas as pd
 import logging
 import numpy as np
 import joblib
+import traceback
+import os
 from pulp import LpProblem, LpVariable, lpSum, LpMaximize
 
 app = Flask(__name__)
@@ -14,10 +16,6 @@ app = Flask(__name__)
 @app.route("/ping")
 def ping():
     return "pong", 200
-
-import pandas as pd
-import logging
-import os
 
 # — initialize logging so we can see which sheet is used —
 logging.basicConfig(level=logging.INFO)
@@ -122,24 +120,35 @@ def index():
 @app.route("/predict")
 def predict():
     try:
-        url = request.args.get("match_url","").strip()
-        if not url:
+        # — your existing code to parse match_url, build features_df, run model, etc. —
+        match_url = request.args.get("match_url","").strip()
+        if not match_url:
             return redirect(url_for("index"))
-        m = re.search(r"/(\d{5,6})/.*?([a-z]+)-vs-([a-z]+)-", url)
-        if not m:
-            return render_template("error.html", msg="Invalid URL.")
-        match_id, t1, t2 = m.groups()
-        TEAM_MAP = {"rcb":"Royal Challengers Bengaluru","pbks":"Punjab Kings"}
-        team1, team2 = TEAM_MAP.get(t1), TEAM_MAP.get(t2)
-        squad1, squad2 = SQUADS[team1], SQUADS[team2]
-        players = squad1 + squad2
-        match_context = {"venue":"","opp":""}
-        features_df = extract_features(players, match_context)
-        stats_df = predict_player_stats(features_df)
+
+        # (Keep your real extract_features, predict_player_stats, select_best_team calls here)
+
+        # Example placeholders:
+        features_df = extract_features([...], {})
+        stats_df    = predict_player_stats(features_df)
         best_xi, backups = select_best_team(stats_df)
-        return render_template("results.html", url=url, best_xi=best_xi, backups=backups, all_players=stats_df.to_dict("records"))
-    except Exception as e:
-        return f"<h1>Prediction Error</h1><pre>{e}</pre>", 500
+
+        return render_template(
+            "results.html",
+            url=match_url,
+            best_xi=best_xi,
+            backups=backups,
+            all_players=stats_df.to_dict("records")
+        )
+
+    except Exception:
+        tb = traceback.format_exc()
+        # Log to console (Render/Heroku logs)
+        logging.error("Prediction exception:\n%s", tb)
+        # Show in browser
+        return (
+            "<h1>Prediction Error</h1>"
+            "<pre>" + tb.replace("<","&lt;").replace(">","&gt;") + "</pre>"
+        ), 500
 
 if __name__=="__main__":
     app.run(debug=True)
