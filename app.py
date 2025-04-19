@@ -8,9 +8,35 @@ from pulp import LpProblem, LpVariable, lpSum, LpMaximize
 
 app = Flask(__name__)
 
-# Load squads from Excel
+import pandas as pd
+import logging
+import os
+
+# — initialize logging so we can see which sheet is used —
+logging.basicConfig(level=logging.INFO)
+
+# path to your Excel file
 IPL_XLSX = os.path.join("data", "IPL_Data.xlsx")
-squads_df = pd.read_excel(IPL_XLSX, sheet_name="Team Sheets")
+
+# 1. List available sheets
+xls = pd.ExcelFile(IPL_XLSX)
+logging.info(f"Available sheets in {IPL_XLSX}: {xls.sheet_names}")
+
+# 2. Pick the sheet that looks like your squads/team sheet
+sheet_name = None
+for name in xls.sheet_names:
+    if "squad" in name.lower() or "team" in name.lower():
+        sheet_name = name
+        break
+if sheet_name is None:
+    # fallback to the first sheet
+    sheet_name = xls.sheet_names[0]
+logging.info(f"Loading squads from sheet: {sheet_name}")
+
+# 3. Read that sheet
+squads_df = pd.read_excel(IPL_XLSX, sheet_name=sheet_name)
+
+# 4. Build your SQUADS dict
 SQUADS = {
     team: squads_df.at[0, team].split("\n")
     for team in squads_df.columns
