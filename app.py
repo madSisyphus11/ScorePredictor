@@ -54,15 +54,21 @@ MODEL_PATH = os.path.join("model", "xgb_model.pkl")
 model = joblib.load(MODEL_PATH)
 
 def extract_features(players, match_context):
+    """
+    Temporary stub: build a minimal DataFrame with the columns
+    required by predict_player_stats and select_best_team.
+    """
     import pandas as pd
-    # one row per player with the minimal columns needed
+    import numpy as np
+
+    # Construct a row per player with dummy historic std, credit cost, and foreign flag.
     df = pd.DataFrame({
         "player": players,
-        "team": ["RCB" if "RCB" in p else "PBKS" for p in players],
+        "team": [p.split()[-1] if " " in p else "" for p in players],  # crude team tag just so it’s non-empty
         "role": ["Batter"] * len(players),
-        "hist_std": [10] * len(players),
+        "hist_std": [10.0] * len(players),
         "cricket_credit": [8] * len(players),
-        "is_foreign": [False] * len(players),
+        "is_foreign": [False] * len(players)
     })
     return df
 
@@ -115,22 +121,25 @@ def index():
 
 @app.route("/predict")
 def predict():
-    url = request.args.get("match_url","").strip()
-    if not url:
-        return redirect(url_for("index"))
-    m = re.search(r"/(\d{5,6})/.*?([a-z]+)-vs-([a-z]+)-", url)
-    if not m:
-        return render_template("error.html", msg="Invalid URL.")
-    match_id, t1, t2 = m.groups()
-    TEAM_MAP = {"rcb":"Royal Challengers Bengaluru","pbks":"Punjab Kings"}
-    team1, team2 = TEAM_MAP.get(t1), TEAM_MAP.get(t2)
-    squad1, squad2 = SQUADS[team1], SQUADS[team2]
-    players = squad1 + squad2
-    match_context = {"venue":"","opp":""}
-    features_df = extract_features(players, match_context)
-    stats_df = predict_player_stats(features_df)
-    best_xi, backups = select_best_team(stats_df)
-    return render_template("results.html", url=url, best_xi=best_xi, backups=backups, all_players=stats_df.to_dict("records"))
+    try:
+        url = request.args.get("match_url","").strip()
+        if not url:
+            return redirect(url_for("index"))
+        m = re.search(r"/(\d{5,6})/.*?([a-z]+)-vs-([a-z]+)-", url)
+        if not m:
+            return render_template("error.html", msg="Invalid URL.")
+        match_id, t1, t2 = m.groups()
+        TEAM_MAP = {"rcb":"Royal Challengers Bengaluru","pbks":"Punjab Kings"}
+        team1, team2 = TEAM_MAP.get(t1), TEAM_MAP.get(t2)
+        squad1, squad2 = SQUADS[team1], SQUADS[team2]
+        players = squad1 + squad2
+        match_context = {"venue":"","opp":""}
+        features_df = extract_features(players, match_context)
+        stats_df = predict_player_stats(features_df)
+        best_xi, backups = select_best_team(stats_df)
+        return render_template("results.html", url=url, best_xi=best_xi, backups=backups, all_players=stats_df.to_dict("records"))
+    except Exception as e:
+        return f"<h1>Prediction Error</h1><pre>{e}</pre>", 500
 
 if __name__=="__main__":
     app.run(debug=True)
