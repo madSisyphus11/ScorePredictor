@@ -140,9 +140,16 @@ def predict():
 
         # Map URL codes to full squad keys
         TEAM_MAP = {
-            "rcb": "Royal Challengers Bengaluru",
+            "rcb":  "Royal Challengers Bengaluru",
             "pbks": "Punjab Kings",
-            # add the other IPL teams here...
+            "rr":   "Rajasthan Royals",
+            "lsg":  "Lucknow Super Giants",
+            "mi":   "Mumbai Indians",
+            "csk":  "Chennai Super Kings",
+            "kkr":  "Kolkata Knight Riders",
+            "dc":   "Delhi Capitals",
+            "srh":  "Sunrisers Hyderabad",
+            "gt":   "Gujarat Titans"
         }
         team1 = TEAM_MAP.get(code1.lower())
         team2 = TEAM_MAP.get(code2.lower())
