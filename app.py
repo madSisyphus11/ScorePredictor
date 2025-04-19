@@ -8,7 +8,6 @@ import logging
 import numpy as np
 import joblib
 import traceback
-import os
 from pulp import LpProblem, LpVariable, lpSum, LpMaximize
 
 app = Flask(__name__)
@@ -106,9 +105,6 @@ def select_best_team(preds_df, budget=100, max_from_team=7, max_foreign=4):
     backups = preds_df[~preds_df.player.isin(sel)].nlargest(5, "pred")
     return best.to_dict("records"), backups.to_dict("records")
     
-import os
-
-@app.route("/", methods=["GET","POST"])
 @app.route("/", methods=["GET","POST"])
 def index():
     logging.info("INDEX ROUTE HIT")
@@ -120,18 +116,42 @@ def index():
 @app.route("/predict")
 def predict():
     try:
-        # — your existing code to parse match_url, build features_df, run model, etc. —
-        match_url = request.args.get("match_url","").strip()
+        match_url = request.args.get("match_url", "").strip()
         if not match_url:
             return redirect(url_for("index"))
 
-        # (Keep your real extract_features, predict_player_stats, select_best_team calls here)
+        # 1. Extract match ID and team codes from the URL
+        m = re.search(r"/(\d{5,6})/.*?([a-z]+)-vs-([a-z]+)-", match_url)
+        if not m:
+            return "<h1>Invalid match URL</h1>", 400
+        match_id, code1, code2 = m.groups()
 
-        # Example placeholders:
-        features_df = extract_features([...], {})
-        stats_df    = predict_player_stats(features_df)
+        # 2. Map codes to full team names and retrieve squads
+        TEAM_MAP = {
+            "rcb": "Royal Challengers Bengaluru",
+            "pbks": "Punjab Kings",
+            # add other IPL team codes here...
+        }
+        team1 = TEAM_MAP.get(code1.lower())
+        team2 = TEAM_MAP.get(code2.lower())
+        if not team1 or not team2:
+            return "<h1>Unknown team code in URL</h1>", 400
+
+        squad1 = SQUADS.get(team1, [])
+        squad2 = SQUADS.get(team2, [])
+        players = squad1 + squad2
+
+        # 3. Build a minimal context (expand later)
+        match_context = {"venue": "", "opp": None}
+
+        # 4. Call your extract_features stub with the real list
+        features_df = extract_features(players, match_context)
+
+        # 5. Generate stats and dummy lineup
+        stats_df = predict_player_stats(features_df)
         best_xi, backups = select_best_team(stats_df)
 
+        # 6. Render the results page
         return render_template(
             "results.html",
             url=match_url,
@@ -142,13 +162,9 @@ def predict():
 
     except Exception:
         tb = traceback.format_exc()
-        # Log to console (Render/Heroku logs)
         logging.error("Prediction exception:\n%s", tb)
-        # Show in browser
-        return (
-            "<h1>Prediction Error</h1>"
-            "<pre>" + tb.replace("<","&lt;").replace(">","&gt;") + "</pre>"
-        ), 500
+        return f"<h1>Prediction Error</h1><pre>{tb}</pre>", 500
+
 
 if __name__=="__main__":
     app.run(debug=True)
