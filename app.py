@@ -1,4 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for
+import logging
+logging.basicConfig(level=logging.INFO)
 import re, os, requests
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -6,8 +8,6 @@ import logging
 import numpy as np
 import joblib
 from pulp import LpProblem, LpVariable, lpSum, LpMaximize
-
-logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
 
@@ -105,23 +105,13 @@ def select_best_team(preds_df, budget=100, max_from_team=7, max_foreign=4):
 import os
 
 @app.route("/", methods=["GET","POST"])
+@app.route("/", methods=["GET","POST"])
 def index():
-    logging.info("INDEX ROUTE HIT (debug version)")
-    # Show what templates folder contains
-    tpl_dir = os.path.join(os.getcwd(), "templates")
-    try:
-        files = os.listdir(tpl_dir)
-    except Exception as e:
-        files = f"Error listing {tpl_dir}: {e}"
-    # Show current working directory too
-    cwd = os.getcwd()
-    # Return a simple HTML page with that info
-    return f"""
-      <h1>Debug: Index Route</h1>
-      <p><strong>CWD:</strong> {cwd}</p>
-      <p><strong>Templates dir:</strong> {tpl_dir}</p>
-      <p><strong>Files in templates/:</strong> {files}</p>
-    """, 200
+    logging.info("INDEX ROUTE HIT")
+    if request.method == "POST":
+        match_url = request.form.get("match_url")
+        return redirect(url_for("predict", match_url=match_url))
+    return render_template("index.html")
 
 @app.route("/predict")
 def predict():
