@@ -2,11 +2,18 @@ from flask import Flask, render_template, request, redirect, url_for
 import re, os, requests
 from bs4 import BeautifulSoup
 import pandas as pd
+import logging
 import numpy as np
 import joblib
 from pulp import LpProblem, LpVariable, lpSum, LpMaximize
 
+logging.basicConfig(level=logging.INFO)
+
 app = Flask(__name__)
+
+@app.route("/ping")
+def ping():
+    return "pong", 200
 
 import pandas as pd
 import logging
@@ -97,9 +104,12 @@ def select_best_team(preds_df, budget=100, max_from_team=7, max_foreign=4):
 
 @app.route("/", methods=["GET","POST"])
 def index():
-    if request.method=="POST":
-        return redirect(url_for("predict", match_url=request.form["match_url"]))
-    return render_template("index.html")
+    logging.info("INDEX ROUTE HIT")
+    try:
+        return render_template("index.html")
+    except Exception as e:
+        logging.error("Index render failed: %s", e)
+        return "<h1>Index error: see logs</h1><pre>" + str(e) + "</pre>", 500
 
 @app.route("/predict")
 def predict():
